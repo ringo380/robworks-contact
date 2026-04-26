@@ -12,6 +12,7 @@
 
 interface Env {
   RESEND_API_KEY: string;
+  TURNSTILE_SECRET: string;
   CONTACT_RATELIMIT: KVNamespace;
 }
 
@@ -64,6 +65,7 @@ interface ContactBody {
   project_type: unknown;
   message: unknown;
   website: unknown;
+  "cf-turnstile-response": unknown;
 }
 
 interface ContactData {
@@ -88,6 +90,30 @@ function validate(body: ContactBody): { ok: true; data: ContactData } | { ok: fa
   if (message.length < 10 || message.length > 4000) return { ok: false, reason: "message" };
 
   return { ok: true, data: { name, email, project_type, message } };
+}
+
+async function verifyTurnstile(env: Env, token: string, ip: string): Promise<boolean> {
+  const params = new URLSearchParams();
+  params.set("secret", env.TURNSTILE_SECRET);
+  params.set("response", token);
+  if (ip && ip !== "unknown") params.set("remoteip", ip);
+  try {
+    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
+    });
+    if (!res.ok) return false;
+    const body = (await res.json()) as { success?: boolean; "error-codes"?: string[] };
+    if (!body.success) {
+      console.error(`Turnstile rejected: ${(body["error-codes"] || []).join(",")}`);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error(`Turnstile fetch failed: ${e instanceof Error ? e.message : String(e)}`);
+    return false;
+  }
 }
 
 async function rateLimitExceeded(env: Env, ip: string): Promise<boolean> {
@@ -185,6 +211,15 @@ export default {
     }
 
     const ip = req.headers.get("CF-Connecting-IP") ?? "unknown";
+
+    const token = typeof body["cf-turnstile-response"] === "string" ? body["cf-turnstile-response"] : "";
+    if (!token) {
+      return json({ ok: false, error: "challenge" }, 400, origin);
+    }
+    if (!(await verifyTurnstile(env, token, ip))) {
+      return json({ ok: false, error: "challenge" }, 400, origin);
+    }
+
     if (await rateLimitExceeded(env, ip)) {
       return json({ ok: false, error: "rate_limit" }, 429, origin);
     }
