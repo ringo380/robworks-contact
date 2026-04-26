@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "robworks-contact",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-04-01",
+  "observability": { "enabled": true },
+  "kv_namespaces": [
+    {
+      "binding": "CONTACT_RATELIMIT",
+      "id": "0116bca27a2e4d15a3b0d9021fe97038"
+    }
+  ],
+  "routes": [
+    // Custom domain — added after CNAME `contact.robworks.info -> *.workers.dev`
+    // resolves. Comment out for the initial workers.dev-only smoke test.
+    // { "pattern": "contact.robworks.info/api/*", "custom_domain": true }
+  ]
+}

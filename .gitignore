@@ -1,0 +1,10 @@
+node_modules/
+.wrangler/
+.dev.vars
+.DS_Store
+
+# Personal Claude config — never commit
+CLAUDE.md
+**/CLAUDE.md
+.claude/
+memory/
