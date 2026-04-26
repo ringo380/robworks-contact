@@ -11,8 +11,6 @@
     }
   ],
   "routes": [
-    // Custom domain — added after CNAME `contact.robworks.info -> *.workers.dev`
-    // resolves. Comment out for the initial workers.dev-only smoke test.
-    // { "pattern": "contact.robworks.info/api/*", "custom_domain": true }
+    { "pattern": "contact.robworks.info", "custom_domain": true }
   ]
 }
